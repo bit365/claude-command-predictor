@@ -134,6 +134,11 @@ namespace ClaudePredictor
         {
             var result = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
+            if (HasOptionTerminator(tokens))
+            {
+                return [];
+            }
+
             if (tokens.Count <= 1)
             {
                 AddCandidates(input, currentToken, RootCommands.Concat(RootOptions), result, cancellationToken);
@@ -167,15 +172,15 @@ namespace ClaudePredictor
                 return false;
             }
 
-            var hasTrailingSpace = input.EndsWith(' ');
+            var hasTrailingWhitespace = HasTrailingWhitespace(input);
 
-            if (!hasTrailingSpace && TryAddEqualsStyleValueSuggestions(input, currentToken, result, cancellationToken))
+            if (!hasTrailingWhitespace && TryAddEqualsStyleValueSuggestions(input, currentToken, result, cancellationToken))
             {
                 return true;
             }
 
             var optionToken = tokens[^1];
-            if (!hasTrailingSpace)
+            if (!hasTrailingWhitespace)
             {
                 optionToken = tokens[^2];
             }
@@ -188,7 +193,7 @@ namespace ClaudePredictor
                     return false;
                 }
 
-                var pathPrefix = hasTrailingSpace ? string.Empty : currentToken;
+                var pathPrefix = hasTrailingWhitespace ? string.Empty : currentToken;
                 var pathCandidates = GetPathCandidates(pathPrefix, directoriesOnly);
                 AddCandidates(input, currentToken, pathCandidates, result, cancellationToken);
                 return true;
@@ -240,7 +245,7 @@ namespace ClaudePredictor
             HashSet<string> result,
             CancellationToken cancellationToken)
         {
-            var hasTrailingSpace = input.EndsWith(' ');
+            var hasTrailingWhitespace = HasTrailingWhitespace(input);
 
             foreach (var candidate in candidates)
             {
@@ -255,7 +260,7 @@ namespace ClaudePredictor
                     continue;
                 }
 
-                if (hasTrailingSpace)
+                if (hasTrailingWhitespace)
                 {
                     result.Add(input + QuoteIfNeeded(candidate));
                 }
@@ -399,13 +404,29 @@ namespace ClaudePredictor
 
         private static string GetCurrentToken(string input, List<string> tokens)
         {
-            if (string.IsNullOrEmpty(input) || input.EndsWith(' '))
+            if (string.IsNullOrEmpty(input) || HasTrailingWhitespace(input))
             {
                 return string.Empty;
             }
 
             return tokens.Count == 0 ? string.Empty : tokens[^1];
         }
+
+        private static bool HasOptionTerminator(List<string> tokens)
+        {
+            for (var i = 1; i < tokens.Count; i++)
+            {
+                if (tokens[i] == "--")
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static bool HasTrailingWhitespace(string input) =>
+            !string.IsNullOrEmpty(input) && char.IsWhiteSpace(input[^1]);
 
         private static List<string> Tokenize(string input)
         {
