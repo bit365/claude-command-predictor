@@ -1,12 +1,7 @@
-﻿using System;
-using System.Collections.Frozen;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
+﻿using System.Collections.Frozen;
 using System.Management.Automation;
 using System.Management.Automation.Subsystem;
 using System.Management.Automation.Subsystem.Prediction;
-using System.Threading;
 
 namespace ClaudePredictor
 {
@@ -481,13 +476,37 @@ namespace ClaudePredictor
 
     public sealed class Init : IModuleAssemblyInitializer, IModuleAssemblyCleanup
     {
+        private static readonly MyPredictor Predictor = new();
+        private static int _isRegistered;
+
         public void OnImport()
         {
-            SubsystemManager.RegisterSubsystem(SubsystemKind.CommandPredictor, new MyPredictor());
+            if (Interlocked.CompareExchange(ref _isRegistered, 1, 0) != 0)
+            {
+                return;
+            }
+
+            try
+            {
+                SubsystemManager.RegisterSubsystem(SubsystemKind.CommandPredictor, Predictor);
+            }
+            catch (Exception ex) when (IsAlreadyRegistered(ex))
+            {
+                Interlocked.Exchange(ref _isRegistered, 0);
+            }
         }
+
+        private static bool IsAlreadyRegistered(Exception ex) =>
+            ex is ArgumentException or InvalidOperationException &&
+            ex.Message.Contains("already registered", StringComparison.OrdinalIgnoreCase);
 
         public void OnRemove(PSModuleInfo psModuleInfo)
         {
+            if (Interlocked.CompareExchange(ref _isRegistered, 0, 1) != 1)
+            {
+                return;
+            }
+
             SubsystemManager.UnregisterSubsystem(SubsystemKind.CommandPredictor, new Guid(MyPredictor.PredictorGuid));
         }
     }
