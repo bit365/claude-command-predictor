@@ -41,7 +41,21 @@ if (Test-Path $predictorPath) {
 
 Replace the path with the actual DLL location from step 1.
 
-### 3. Verify
+### 3. psmux 用户注意
+
+如果使用 psmux 运行 PowerShell，需要确保 `~/.psmux.conf` 中启用了预测功能：
+
+```
+set -g allow-predictions on
+```
+
+配置后重载：
+
+```
+tmux source-file ~/.psmux.conf
+```
+
+### 4. Verify
 
 ```powershell
 Get-PSSubsystem -Kind CommandPredictor
