@@ -1,56 +1,50 @@
 # ClaudePredictor
 
-`ClaudePredictor` is a PowerShell `ICommandPredictor` plugin for `claude` CLI completion.
+A PowerShell `ICommandPredictor` plugin that provides tab-completion and inline suggestions for the Claude Code CLI.
+
+## Features
+
+- Subcommand completion (`claude auth`, `claude mcp`, `claude plugin`, etc.)
+- Option value suggestions (`--model=sonnet`, `--permission-mode=auto`, etc.)
+- File and directory path completion for relevant options (`--settings`, `--mcp-config`, `--add-dir`, etc.)
+- Supports both space-separated and `=`-style option syntax
 
 ## Requirements
 
-- PowerShell `7.2+`
-- `PSReadLine 2.2.2+`
-- .NET SDK `10.0` (project target: `net10.0`)
+- PowerShell 7.2+
+- PSReadLine 2.2.2+
+- .NET SDK 10.0
 
-## Build
+## Quick Start
 
-From repo root:
-
-```powershell
-dotnet build .\ClaudePredictor\ClaudePredictor.csproj -c Release
-```
-
-Output:
-
-`.\ClaudePredictor\bin\Release\net10.0\ClaudePredictor.dll`
-
-## Use in current `pwsh` session
+### 1. Build
 
 ```powershell
-Import-Module "C:\Users\stack\source\repos\ClaudePredictor\ClaudePredictor\bin\Release\net10.0\ClaudePredictor.dll"
-Set-PSReadLineOption -PredictionSource HistoryAndPlugin
-Set-PSReadLineOption -PredictionViewStyle ListView
-Set-PSReadLineKeyHandler -Chord Ctrl+Spacebar -Function MenuComplete
+dotnet build -c Release
 ```
 
-Verify:
+The compiled DLL is at `ClaudePredictor/bin/Release/net10.0/ClaudePredictor.dll`.
+
+### 2. Install
+
+Add the following to your PowerShell profile (open it with `notepad $PROFILE`):
+
+```powershell
+$predictorPath = Join-Path $PSScriptRoot "path\to\ClaudePredictor.dll"
+if (Test-Path $predictorPath) {
+    Import-Module $predictorPath -ErrorAction SilentlyContinue
+    Set-PSReadLineOption -PredictionSource HistoryAndPlugin
+    Set-PSReadLineOption -PredictionViewStyle ListView
+    Set-PSReadLineKeyHandler -Chord Ctrl+Spacebar -Function MenuComplete
+}
+```
+
+Replace the path with the actual DLL location from step 1.
+
+### 3. Verify
 
 ```powershell
 Get-PSSubsystem -Kind CommandPredictor
 ```
 
-## Auto-load on PowerShell startup
-
-Open your profile:
-
-```powershell
-if (!(Test-Path $PROFILE)) { New-Item -Path $PROFILE -ItemType File -Force | Out-Null }
-notepad $PROFILE
-```
-
-Add:
-
-```powershell
-$claudePredictorDll = "C:\Users\stack\source\repos\ClaudePredictor\ClaudePredictor\bin\Release\net10.0\ClaudePredictor.dll"
-if (Test-Path $claudePredictorDll) {
-    Import-Module $claudePredictorDll -ErrorAction SilentlyContinue
-    Set-PSReadLineOption -PredictionSource HistoryAndPlugin
-    Set-PSReadLineOption -PredictionViewStyle ListView
-    Set-PSReadLineKeyHandler -Chord Ctrl+Spacebar -Function MenuComplete
-}
+You should see `ClaudePredictor` listed. Type `claude ` and press `Ctrl+Spacebar` to see suggestions.
